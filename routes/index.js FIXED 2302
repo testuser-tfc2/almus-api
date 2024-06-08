@@ -1,0 +1,3653 @@
+var express = require('express');
+
+var multer = require('multer');
+
+var router = express.Router();
+const Users = require('../models/users');
+const Importinputexcel = require('../models/uploadimportexcel');
+const Exportinputexcel = require('../models/uploadexportexcel');
+const Spotrateexcel = require('../models/uploadspotrateexcel');
+const Usdinrpremiumexcel = require('../models/uploadusdinrpremiumexcel');
+const Eurinrpremiumexcel = require('../models/uploadeurinrpremiumexcel');
+const Settleddata = require('../models/settled_master');
+const Pcfcexcel = require('../models/uploadpcfcexcel');
+const Forexbuyexcel = require('../models/uploadforexbuyexcel');
+const Forexsellexcel = require('../models/uploadforexsellexcel');
+
+var ObjectId = require('mongoose').Types.ObjectId;
+// include node fs module
+var fs = require('fs');
+const path = require('path');
+var nodemailer = require('nodemailer');
+var ObjectId = require('mongodb').ObjectID;
+
+const async = require('async');
+
+const DIR = './uploads';
+
+let storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, DIR);
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.fieldname + '-' + Date.now() + "-" + (new Date().getTime()).toString(15) + path.extname(file.originalname));
+  }
+});
+let upload = multer({ storage: storage });
+
+
+//Create file
+
+
+// router.post('/filepath', function(req, res, next) {
+//   let filepath = './public/images/shivaji/'+req.body.path;
+//     console.log(filepath)
+
+//     fs.access(filepath, fs.F_OK, (err) => {
+//   if (err) {
+//    fs.writeFile(filepath,'',(err)=> {
+//    if (err) {
+//         res.send(err)
+//     }else{
+//       // res.send("File created successfully!")
+//        res.json({ response: true, message: "File created successfully" });
+//     }
+// });
+//   } else {
+//     console.log("File exists.")
+//     // res.send("File exists")
+//     res.json({ response: false, message: "File exists" });
+
+//   }
+// })
+
+
+// });
+
+
+
+
+// //Create directory
+
+// router.post('/dirpath', function(req, res, next) {
+//   let path2 = req.body.path;
+//     console.log(path2)
+//    fs.mkdir(path.join('./public/images', path2), (err) => {
+//     if (err) {
+
+//         if(err.code=='EEXIST'){
+//         // res.send("Directory Name Already EXIST!")
+//          res.json({ response: false, message: "Directory Name Already EXIST" });
+//         }else{
+//            // res.send("Please enter proper Directory name");
+//             res.json({ response: false, message: "Please enter proper Directory name" });
+//         }
+//     }else{
+//       // res.send("Directory created successfully!")
+//        res.json({ response: true, message: "Directory created successfully" });
+//     }
+
+// });
+
+// });
+
+// //upload file on server
+
+// const fileStorageEngine = multer.diskStorage({
+//   destination:(req,file,cb)=>{
+//     cb(null,'./public/images')
+//   },
+//   filename:(req,file,cb)=>{
+//     cb(null,file.originalname)
+//   }
+// })
+
+// const upload = multer({storage:fileStorageEngine})
+
+// router.post('/single', upload.single('image'),(req,res) => {
+//       console.log(req.file)
+//       // res.send("file Upload sucessfully")
+//       res.json({ response: true, message: "file Upload sucessfully" });
+
+
+//   })
+
+/* GET home page. */
+router.post('/login', function (req, res, next) {
+  let email = req.body.email;
+  let password = req.body.password;
+  console.log({ email: { '$eq': email }, password: { '$eq': password } })
+  Users.findOne({ email: { '$eq': email }, password: { '$eq': password } }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+      console.log({ response: true, message: "Data found", details: user })
+      res.json({ response: true, message: "Data found", details: user });
+    } else {
+      res.json({ response: false, message: "No Data found" });
+    }
+  });
+});
+
+router.post('/addUser', function (req, res, next) {
+  let username = req.body.username;
+  let companyname = req.body.companyname;
+  let email = req.body.email;
+  let phone = req.body.phone;
+  let usertype = req.body.usertype;
+  let exposuredate = req.body.exposuredate;
+  let turnover = req.body.turnover;
+  let banker = req.body.banker;
+  let margincharge = req.body.margincharge;
+  let role = req.body.role;
+  let password = req.body.password;
+  let activestatus = req.body.activestatus;
+
+
+
+
+  Users.findOne({ email: { '$eq': email }, phone: { '$eq': phone } }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+      res.json({ response: false, message: "Data found" });
+    } else {
+      var json_ary = {
+        username: username,
+        companyname: companyname,
+        email: email,
+        phone: phone,
+        usertype: usertype,
+        exposuredate: exposuredate,
+        turnover: turnover,
+        banker: banker,
+        margincharge: margincharge,
+        role: role,
+        password: password,
+        activestatus: activestatus,
+        created_at: new Date(),
+        updated_at: new Date(),
+        created_by: 'admin',
+        updated_by: 'admin',
+
+
+      }
+      Users.create(json_ary, function (err, docs) {
+        if (err) {
+          res.json({ response: false, message: err });
+        } else {
+          res.json({ response: true, message: "Data Inserted", docs: docs });
+          console.log(email)
+          console.log('docs data', docs.email)
+
+
+          var transporter = nodemailer.createTransport({
+            host: "server2.hohtechlabs.com",
+            port: 587,
+            secure: false,
+            auth: {
+              user: 'no-reply@hohtechlabs.com',
+              pass: '3[zJu3XkKRV0'
+            }
+          });
+
+          //    var transporter = nodemailer.createTransport({
+          // service:"gmail",
+          //   auth: {
+          //   user: 'chetan.hoh@gmail.com',
+          //   pass: 'Rajveer!12'
+          //         }
+          //    });
+
+          var mailOptions = {
+            from: 'no-reply@hohtechlabs.com',
+            to: email,
+            subject: 'Almus Team',
+            // text: 'That was easy!'
+            // html: 'emailData'
+
+            html: `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Untitled Document</title>
+</head>
+
+<body>
+<table width="600px" border="0" cellspacing="0" cellpadding="10" style="font-family:Arial, Helvetica, sans-serif; margin:0 auto; border:1px solid #eee; font-size:14px;">
+  <tr>
+    <td><a href="#"><img src="http://localhost:3300/public/logo.png"></a></td>
+  </tr>
+  <tr>
+    <td>Dear Team,</td>
+  </tr>
+  <tr>
+    <td>hope this email finds you well.</td>
+  </tr>
+  <tr>
+    <td>Please find the Activation link of Almus portal with this mail. <a href="http://backup.hohtechlabs.com:3300/verifyUser?id=`+ docs._id + `" style="color:#000; font-weight:bold">click here.</a></td>
+  </tr>
+  <tr>
+    <td height="75">&nbsp;</td>
+  </tr>
+  <tr>
+    <td>Thanks,<br>
+    Team WFM.</td>
+  </tr>
+</table>
+</body>
+</html>`
+
+
+          };
+
+          transporter.sendMail(mailOptions, function (error, info) {
+            if (error) {
+              console.log(error);
+            } else {
+              console.log('Email sent: ' + info.response);
+
+            }
+          });
+
+
+
+        }
+      });
+    }
+  });
+});
+
+router.get('/usersList', function (req, res, next) {
+  Users.find({ role: { '$ne': 'admin' } }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+      console.log({ response: true, message: "Data found", details: user })
+      res.json({ response: true, message: "Data found", details: user });
+    } else {
+      res.json({ response: false, message: "No Data found" });
+    }
+  });
+});
+
+router.post('/editUser', function (req, res, next) {
+  let companyname = req.body.companyname;
+  let email = req.body.email;
+  let phone = req.body.phone;
+  let usertype = req.body.usertype;
+  let exposuredate = req.body.exposuredate;
+  let turnover = req.body.turnover;
+  let banker = req.body.banker;
+  let margincharge = req.body.margincharge;
+  let role = req.body.role;
+  let password = req.body.password;
+  let activestatus = req.body.activestatus;
+  let id = req.body.id;
+  Users.findOneAndUpdate({ _id: new ObjectId(id) }, {
+    $set: {
+      companyname: companyname, email: email, phone: phone, usertype: usertype, exposuredate: exposuredate,
+      turnover: turnover, banker: banker, margincharge: margincharge, role: role, password: password, activestatus: activestatus
+    }
+  }, { returnOriginal: false }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+      res.json({ response: true, message: "User updated" });
+    }
+  });
+});
+
+router.post('/deleteUser', function (req, res, next) {
+  let id = req.body.id;
+  console.log(id);
+  console.log({ _id: new ObjectId(id) })
+  Users.findOneAndDelete({ _id: new ObjectId(id) }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+      res.json({ response: true, message: "User Deleted" });
+    }
+  });
+});
+
+router.post('/blockUser', function (req, res, next) {
+  let id = req.body.id;
+  let activestatus = req.body.activestatus;
+  console.log(id);
+
+  Users.findOneAndUpdate({ _id: new ObjectId(id) }, { $set: { activestatus: activestatus } }, { returnOriginal: false }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+      res.json({ response: true, message: "User BLocked" });
+    }
+  });
+});
+
+
+router.get('/verifyUser', function (req, res, next) {
+  let id = req.query.id;
+  let activestatus = 'Active';
+  Users.findOneAndUpdate({ _id: new ObjectId(id) }, { $set: { activestatus: activestatus } }, { returnOriginal: false }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+      // res.json({ response: true, message: "User Activated" });
+      // <a href="http://localhost:3300"></a>
+      res.redirect('http://backup.hohtechlabs.com:4300/account/login');
+    }
+  });
+});
+
+router.post('/getUser', function (req, res, next) {
+  let id = req.body.id;
+  console.log(id);
+  console.log({ _id: new ObjectId(id) })
+  Users.findOne({ _id: new ObjectId(id) }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+      console.log({ response: true, message: "Data found", details: user })
+      res.json({ response: true, message: "Data found", details: user });
+    } else {
+      res.json({ response: false, message: "No Data found" });
+    }
+  });
+});
+
+
+router.post('/settledinput', function (req, res, next) {
+  let type = req.body.type;
+  let cunter_party_name = req.body.cunter_party_name;
+  let invoice_no = req.body.invoice_no;
+  let currency = req.body.currency;
+  let amount_in_fc = req.body.amount_in_fc;
+  let start_date = req.body.start_date;
+  let due_date = req.body.due_date;
+  let previous_spot = req.body.previous_spot;
+  let previous_premium = req.body.previous_premium;
+  let costed_rate = req.body.costed_rate;
+  let current_spot = req.body.current_spot;
+  let current_premium = req.body.current_premium;
+  let current_forwardrate = req.body.current_forwardrate;
+  let profit_loss = req.body.profit_loss;
+  let settledid = req.body.settledid;
+  let userid = req.body.userid;
+
+  Settleddata.findOne({ _id: new ObjectId(settledid) }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+      res.json({ response: false, message: "Data found" });
+    } else {
+      var json_ary = {
+        type: type,
+        cunter_party_name: cunter_party_name,
+        invoice_no: invoice_no,
+        currency: currency,
+        amount_in_fc: amount_in_fc,
+        start_date: start_date,
+        due_date: due_date,
+        previous_spot: previous_spot,
+        previous_premium: previous_premium,
+        costed_rate: costed_rate,
+        current_spot: current_spot,
+        current_premium: current_premium,
+        current_forwardrate: current_forwardrate,
+        profit_loss: profit_loss,
+        settledid: settledid,
+        userid: userid,
+        created_at: new Date(),
+        updated_at: new Date(),
+        created_by: 'admin',
+        updated_by: 'admin',
+
+      }
+      Settleddata.create(json_ary, function (err, docs) {
+        if (err) {
+          res.json({ response: false, message: err });
+        } else {
+
+
+          Exportinputexcel.findOneAndDelete({ _id: new ObjectId(settledid) }, function (err, user) {
+            if (err) {
+              res.json({ response: false, message: err });
+            }
+            if (user) {
+              res.json({ response: true, message: "Data Inserted" });
+            }
+          });
+
+
+
+        }
+      });
+    }
+  });
+});
+
+
+router.post('/getsettleddata', function (req, res, next) {
+  let userid = req.body.userid;
+
+
+  Settleddata.find({ userid: { '$eq': userid } }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+      res.json({ response: true, message: "Data found", details: user });
+    } else {
+      res.json({ response: false, message: "No Data found" });
+    }
+  });
+});
+
+
+
+router.post('/upload_importexcel', upload.single('file'), function (req, res) {
+  // var wb = new Excel.Workbook();
+  var filename = "";
+  var userid = "";
+  if (req.file) {
+    filename = req.file.filename;
+    userid = req.body.userid;
+    console.log('userid', req.body.userid);
+  }
+
+
+  var filePath = path.resolve(DIR + "/" + filename);
+
+
+  var XLSX = require('xlsx')
+  var workbook = XLSX.readFile(filePath);
+  var sheet_name_list = workbook.SheetNames;
+  var Excel = require("exceljs");
+  var workbook = new Excel.Workbook();
+  var cnt = 1;
+  var json_ary = [];
+  ///var batch_id = String(Math.floor(Math.random() * 100) + 2 + "" + new Date().getTime());
+  workbook.xlsx.readFile(filePath).then(function () {
+    var worksheet = workbook.getWorksheet(sheet_name_list[0]);
+    worksheet.eachRow({ includeEmpty: true }, function (row, rowNumber) {
+      currRow = worksheet.getRow(rowNumber);
+      if (cnt > 1 && currRow.getCell(1).value && currRow.getCell(3).value && currRow.getCell(4).value && currRow.getCell(5).value && currRow.getCell(6).value && currRow.getCell(7).value) {
+
+
+        console.log('currRow.getCell(1).value', currRow.getCell(1).value);
+        console.log('currRow.getCell(2).value', currRow.getCell(2).value);
+        console.log('currRow.getCell(3).value', currRow.getCell(3).value);
+        console.log('currRow.getCell(4).value', currRow.getCell(4).value);
+        console.log('currRow.getCell(5).value', currRow.getCell(5).value);
+        console.log('currRow.getCell(6).value', currRow.getCell(6).value);
+        console.log('currRow.getCell(7).value', currRow.getCell(7).value);
+        console.log('currRow.getCell(8).value', currRow.getCell(8).value);
+
+        var type = "";
+        var cunter_party_name = "";
+        var invoice_no = "";
+        var currency = "";
+        var amount_in_fc = "";
+        var start_date = "";
+        var due_date = "";
+        var bank_name = "";
+        //  var userid = "";
+        // var division_name = "";
+        // var sub_division_code = "";
+        // var sub_division_name = "";
+        // var section_code = "";
+        // var section_name = "";
+
+        type = currRow.getCell(1).value;
+        cunter_party_name = currRow.getCell(2).value;
+        invoice_no = currRow.getCell(3).value;
+        currency = currRow.getCell(4).value;
+        amount_in_fc = currRow.getCell(5).value;
+        start_date = currRow.getCell(6).value;
+        due_date = currRow.getCell(7).value;
+        bank_name = (currRow.getCell(8).value);
+        // section_name = (currRow.getCell(9).value);
+        if (type) {
+          type = type.toString();
+        }
+        if (cunter_party_name) {
+          cunter_party_name = cunter_party_name.toString();
+        }
+        if (invoice_no) {
+          invoice_no = invoice_no.toString();
+        }
+        if (currency) {
+          currency = currency.toString();
+        }
+        if (amount_in_fc) {
+          amount_in_fc = amount_in_fc.toString();
+        }
+        if (start_date) {
+          start_date = start_date.toString();
+        }
+        if (due_date) {
+          due_date = due_date.toString();
+        }
+        if (bank_name) {
+          bank_name = bank_name.toString();
+        }
+        // if (section_code) {
+        //     section_code = section_code.toString();
+        // }
+        // if (section_name) {
+        //     section_name = section_name.toString();
+        // }
+
+        // if (userid) {
+
+        json_ary.push({
+          userid: (userid),
+          type: (type),
+          cunter_party_name: cunter_party_name,
+          invoice_no: (invoice_no),
+          currency: (currency),
+          amount_in_fc: amount_in_fc,
+          start_date: start_date,
+          due_date: due_date,
+          bank_name: bank_name,
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: 'admin',
+          updated_by: 'admin',
+        });
+
+
+        // }
+      }
+      cnt++;
+    });
+
+    Importinputexcel.collection.insertMany(json_ary, function (err, docs) {
+      if (err) {
+        //return console.error(err);
+        res.json({ response: false, message: "Excel not uploaded" });
+      } else {
+        res.json({ response: true, message: "Excel has been successfully uploaded", filepath: filePath, count: json_ary.length });
+      }
+    });
+  });
+
+});
+
+
+
+router.post('/upload_exportexcel', upload.single('file'), function (req, res) {
+  // var wb = new Excel.Workbook();
+  var filename = "";
+  var userid = "";
+  if (req.file) {
+    filename = req.file.filename;
+    userid = req.body.userid;
+    console.log('userid', req.body.userid);
+  }
+
+
+  var filePath = path.resolve(DIR + "/" + filename);
+
+
+  var XLSX = require('xlsx')
+  var workbook = XLSX.readFile(filePath);
+  var sheet_name_list = workbook.SheetNames;
+  var Excel = require("exceljs");
+  var workbook = new Excel.Workbook();
+  var cnt = 1;
+  var json_ary = [];
+  ///var batch_id = String(Math.floor(Math.random() * 100) + 2 + "" + new Date().getTime());
+  workbook.xlsx.readFile(filePath).then(function () {
+    var worksheet = workbook.getWorksheet(sheet_name_list[0]);
+    worksheet.eachRow({ includeEmpty: true }, function (row, rowNumber) {
+      currRow = worksheet.getRow(rowNumber);
+      if (cnt > 1 && currRow.getCell(1).value && currRow.getCell(3).value && currRow.getCell(4).value && currRow.getCell(5).value && currRow.getCell(6).value && currRow.getCell(7).value) {
+
+
+        // console.log('currRow.getCell(1).value',currRow.getCell(1).value);
+        // console.log('currRow.getCell(2).value',currRow.getCell(2).value);
+        // console.log('currRow.getCell(3).value',currRow.getCell(3).value);
+        // console.log('currRow.getCell(4).value',currRow.getCell(4).value);
+        // console.log('currRow.getCell(5).value',currRow.getCell(5).value);
+        // console.log('currRow.getCell(6).value',currRow.getCell(6).value);
+        // console.log('currRow.getCell(7).value',currRow.getCell(7).value);
+        // console.log('currRow.getCell(8).value',currRow.getCell(8).value);
+
+        var type = "";
+        var cunter_party_name = "";
+        var invoice_no = "";
+        var currency = "";
+        var amount_in_fc = "";
+        var start_date = "";
+        var due_date = "";
+        var bank_name = "";
+        //  var userid = "";
+        // var division_name = "";
+        // var sub_division_code = "";
+        // var sub_division_name = "";
+        // var section_code = "";
+        // var section_name = "";
+
+        type = currRow.getCell(1).value;
+        cunter_party_name = currRow.getCell(2).value;
+        invoice_no = currRow.getCell(3).value;
+        currency = currRow.getCell(4).value;
+        amount_in_fc = currRow.getCell(5).value;
+        start_date = currRow.getCell(6).value;
+        due_date = currRow.getCell(7).value;
+        bank_name = (currRow.getCell(8).value);
+        // section_name = (currRow.getCell(9).value);
+        if (type) {
+          type = type.toString();
+        }
+        if (cunter_party_name) {
+          cunter_party_name = cunter_party_name.toString();
+        }
+        if (invoice_no) {
+          invoice_no = invoice_no.toString();
+        }
+        if (currency) {
+          currency = currency.toString();
+        }
+        if (amount_in_fc) {
+          amount_in_fc = amount_in_fc.toString();
+        }
+        if (start_date) {
+          start_date = start_date.toString();
+        }
+        if (due_date) {
+          due_date = due_date.toString();
+        }
+        if (bank_name) {
+          bank_name = bank_name.toString();
+        }
+        // if (section_code) {
+        //     section_code = section_code.toString();
+        // }
+        // if (section_name) {
+        //     section_name = section_name.toString();
+        // }
+
+        // if (userid) {
+
+        json_ary.push({
+          userid: (userid),
+          type: (type),
+          cunter_party_name: cunter_party_name,
+          invoice_no: (invoice_no),
+          currency: (currency),
+          amount_in_fc: amount_in_fc,
+          start_date: start_date,
+          due_date: due_date,
+          bank_name: bank_name,
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: 'admin',
+          updated_by: 'admin',
+        });
+
+
+        // }
+      }
+      cnt++;
+    });
+
+    Exportinputexcel.collection.insertMany(json_ary, function (err, docs) {
+      if (err) {
+        //return console.error(err);
+        res.json({ response: false, message: "Excel not uploaded" });
+      } else {
+        res.json({ response: true, message: "Excel has been successfully uploaded", filepath: filePath, count: json_ary.length });
+      }
+    });
+  });
+
+})
+
+
+
+
+router.post('/getexportexceldata', function (req, res, next) {
+  let userid = req.body.userid;
+  let type = req.body.type;
+  console.log({ userid: { '$eq': userid }, type: { '$eq': type } })
+  Exportinputexcel.find({ userid: { '$eq': userid }, type: { '$eq': type } }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+      var mydata = [];
+      mydata.push(user);
+
+      console.log(user)
+      res.json({ response: true, message: "Data found", details: user });
+    } else {
+      res.json({ response: false, message: "No Data found" });
+    }
+  });
+});
+
+
+
+
+
+
+router.post('/getimportexceldata', function (req, res, next) {
+  let userid = req.body.userid;
+  let type = req.body.type;
+  console.log({ userid: { '$eq': userid }, type: { '$eq': type } })
+  Importinputexcel.find({ userid: { '$eq': userid }, type: { '$eq': type } }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+      // var mydata = [];
+      //  mydata.push(user)
+      res.json({ response: true, message: "Data found", details: user });
+    } else {
+      res.json({ response: false, message: "No Data found" });
+    }
+  });
+});
+
+
+
+router.post('/upload_spotrateexcel', upload.single('file'), function (req, res) {
+  // var wb = new Excel.Workbook();
+  var filename = "";
+  var userid = "";
+  if (req.file) {
+    filename = req.file.filename;
+    userid = req.body.userid;
+    console.log('userid', req.body.userid);
+  }
+
+
+  var filePath = path.resolve(DIR + "/" + filename);
+
+
+  var XLSX = require('xlsx')
+  var workbook = XLSX.readFile(filePath);
+  var sheet_name_list = workbook.SheetNames;
+  var Excel = require("exceljs");
+  var workbook = new Excel.Workbook();
+  var cnt = 1;
+  var json_ary = [];
+  ///var batch_id = String(Math.floor(Math.random() * 100) + 2 + "" + new Date().getTime());
+  workbook.xlsx.readFile(filePath).then(function () {
+    var worksheet = workbook.getWorksheet(sheet_name_list[0]);
+    worksheet.eachRow({ includeEmpty: true }, function (row, rowNumber) {
+      currRow = worksheet.getRow(rowNumber);
+      if (cnt > 1 && currRow.getCell(1).value && currRow.getCell(2).value && currRow.getCell(3).value) {
+
+
+        var applicable_date = "";
+        var spotin_usd = "";
+        var spotin_eur = "";
+
+
+
+        applicable_date = currRow.getCell(1).value;
+        spotin_usd = currRow.getCell(2).value;
+        spotin_eur = currRow.getCell(3).value;
+
+        if (applicable_date) {
+          applicable_date = applicable_date.toString();
+        }
+        if (spotin_usd) {
+          spotin_usd = spotin_usd.toString();
+        }
+        if (spotin_eur) {
+          spotin_eur = spotin_eur.toString();
+        }
+
+
+
+
+        // if (userid) {
+
+        json_ary.push({
+          userid: (userid),
+          applicable_date: applicable_date,
+          spotin_usd: (spotin_usd),
+          spotin_eur: (spotin_eur),
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: 'admin',
+          updated_by: 'admin',
+        });
+
+
+        // }
+      }
+      cnt++;
+    });
+
+    Spotrateexcel.collection.insertMany(json_ary, function (err, docs) {
+      if (err) {
+        //return console.error(err);
+        res.json({ response: false, message: "Excel not uploaded" });
+      } else {
+        res.json({ response: true, message: "Excel has been successfully uploaded", filepath: filePath, count: json_ary.length });
+      }
+    });
+  });
+
+})
+
+
+
+
+// router.post('/upload_eurpremiumexcel', upload.single('file'), function (req, res) {
+//         // var wb = new Excel.Workbook();
+//         var filename = "";
+//         var userid = "";
+//         if (req.file) {
+//             filename = req.file.filename;
+//             userid  =req.body.userid;
+//             console.log('userid',req.body.userid);
+//         }
+
+
+//         var filePath = path.resolve(DIR + "/" + filename);
+
+
+//         var XLSX = require('xlsx')
+//         var workbook = XLSX.readFile(filePath);
+//         var sheet_name_list = workbook.SheetNames;
+//         var Excel = require("exceljs");
+//         var workbook = new Excel.Workbook();
+//         var cnt = 1;
+//         var json_ary = [];
+//         ///var batch_id = String(Math.floor(Math.random() * 100) + 2 + "" + new Date().getTime());
+//         workbook.xlsx.readFile(filePath).then(function () {
+//             var worksheet = workbook.getWorksheet(sheet_name_list[0]);
+//             worksheet.eachRow({ includeEmpty: true }, function (row, rowNumber) {
+//                 currRow = worksheet.getRow(rowNumber);
+//                 if (cnt > 1 && currRow.getCell(1).value && currRow.getCell(2).value && currRow.getCell(3).value) {
+
+
+//                        var applicable_date = "";
+//                        var currency = "";
+//                        var tenor = "";
+//                         var settled_date = "";
+//                          var bid_rate = "";
+//                           var offer_rate = "";
+//                            var source = "";
+
+
+//                        applicable_date = currRow.getCell(1).value;
+//                       currency = currRow.getCell(2).value;
+//                        tenor = currRow.getCell(3).value;
+//                         settled_date = currRow.getCell(4).value;
+//                          bid_rate = currRow.getCell(5).value;
+//                           offer_rate = currRow.getCell(6).value;
+//                            source = currRow.getCell(7).value;
+
+//                     if (applicable_date) {
+//                         applicable_date = applicable_date.toString();
+//                     }
+//                     if (currency) {
+//                         currency = currency.toString();
+//                     }
+//                     if (tenor) {
+//                         tenor = tenor.toString();
+//                     }
+//                      if (settled_date) {
+//                         settled_date = settled_date.toString();
+//                     }
+//                      if (bid_rate) {
+//                         bid_rate = bid_rate.toString();
+//                     }
+//                     if (offer_rate) {
+//                         offer_rate = offer_rate.toString();
+//                     }
+//                     if (source) {
+//                         source = source.toString();
+//                     }
+
+
+
+
+
+
+//                     // if (userid) {
+
+//                         json_ary.push({
+//                             userid: (userid),
+//                             applicable_date: applicable_date,
+//                             currency: (currency),
+//                             tenor: (tenor),
+//                             settled_date: (settled_date),
+//                             bid_rate: (bid_rate),
+//                             offer_rate: (offer_rate),
+//                             source: (source),
+//                             created_at : new Date(),
+//                             updated_at : new Date(),
+//                             created_by : 'admin',
+//                             updated_by : 'admin',
+//                         });
+
+
+//                     // }
+//                 }
+//                 cnt++;
+//             });
+
+//             Eurinrpremiumexcel.collection.insertMany(json_ary, function (err, docs) {
+//                 if (err) {
+//                     //return console.error(err);
+//                      res.json({ response: false, message: "Excel not uploaded" });
+//                 }else{
+//                    res.json({ response: true, message: "Excel has been successfully uploaded", filepath: filePath, count: json_ary.length });
+//                 }
+//             });
+//         });
+
+//     })
+
+
+
+router.post('/upload_eurpremiumexcel', upload.single('file'), function (req, res) {
+  // var wb = new Excel.Workbook();
+  var filename = "";
+  var userid = "";
+  if (req.file) {
+    filename = req.file.filename;
+    userid = req.body.userid;
+    console.log('userid', req.body.userid);
+  }
+
+
+  var filePath = path.resolve(DIR + "/" + filename);
+
+
+  var XLSX = require('xlsx')
+  var workbook = XLSX.readFile(filePath);
+  var sheet_name_list = workbook.SheetNames;
+  var Excel = require("exceljs");
+  var workbook = new Excel.Workbook();
+  var cnt = 1;
+  var json_ary = [];
+  ///var batch_id = String(Math.floor(Math.random() * 100) + 2 + "" + new Date().getTime());
+  workbook.xlsx.readFile(filePath).then(function () {
+    var worksheet = workbook.getWorksheet(sheet_name_list[0]);
+    worksheet.eachRow({ includeEmpty: true }, function (row, rowNumber) {
+      currRow = worksheet.getRow(rowNumber);
+      if (cnt > 1 && currRow.getCell(1).value && currRow.getCell(2).value && currRow.getCell(3).value) {
+
+
+        var applicable_date = "";
+        var currency = "";
+        var tenor = "";
+        var settled_date = "";
+        var bid_rate = "";
+        var offer_rate = "";
+        var source = "";
+
+
+        applicable_date = currRow.getCell(1).value;
+        currency = currRow.getCell(2).value;
+        tenor = currRow.getCell(3).value;
+        settled_date = currRow.getCell(4).value;
+        bid_rate = currRow.getCell(5).value;
+        offer_rate = currRow.getCell(6).value;
+        source = currRow.getCell(7).value;
+
+        if (applicable_date) {
+          applicable_date = applicable_date.toString();
+        }
+        if (currency) {
+          currency = currency.toString();
+        }
+        if (tenor) {
+          tenor = tenor.toString();
+        }
+        if (settled_date) {
+          settled_date = settled_date.toString();
+        }
+        if (bid_rate) {
+          bid_rate = bid_rate.toString();
+        }
+        if (offer_rate) {
+          offer_rate = offer_rate.toString();
+        }
+        if (source) {
+          source = source.toString();
+        }
+
+
+
+
+
+
+        // if (userid) {
+
+        json_ary.push({
+          userid: (userid),
+          applicable_date: applicable_date,
+          currency: (currency),
+          tenor: (tenor),
+          settled_date: (settled_date),
+          bid_rate: (bid_rate),
+          offer_rate: (offer_rate),
+          source: (source),
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: 'admin',
+          updated_by: 'admin',
+        });
+
+
+
+        // }
+      }
+      cnt++;
+    });
+
+    Eurinrpremiumexcel.collection.insertMany(json_ary, function (err, docs) {
+      if (err) {
+        //return console.error(err);
+        res.json({ response: false, message: "Excel not uploaded" });
+      } else {
+        res.json({ response: true, message: "Excel has been successfully uploaded", filepath: filePath, count: json_ary.length });
+      }
+    });
+  });
+
+})
+
+
+
+
+
+router.post('/upload_usdpremiumexcel', upload.single('file'), function (req, res) {
+  // var wb = new Excel.Workbook();
+  var filename = "";
+  var userid = "";
+  if (req.file) {
+    filename = req.file.filename;
+    userid = req.body.userid;
+    console.log('userid', req.body.userid);
+  }
+
+
+  var filePath = path.resolve(DIR + "/" + filename);
+
+
+  var XLSX = require('xlsx')
+  var workbook = XLSX.readFile(filePath);
+  var sheet_name_list = workbook.SheetNames;
+  var Excel = require("exceljs");
+  var workbook = new Excel.Workbook();
+  var cnt = 1;
+  var json_ary = [];
+  ///var batch_id = String(Math.floor(Math.random() * 100) + 2 + "" + new Date().getTime());
+  workbook.xlsx.readFile(filePath).then(function () {
+    var worksheet = workbook.getWorksheet(sheet_name_list[0]);
+    worksheet.eachRow({ includeEmpty: true }, function (row, rowNumber) {
+      currRow = worksheet.getRow(rowNumber);
+      if (cnt > 1 && currRow.getCell(1).value && currRow.getCell(2).value && currRow.getCell(3).value) {
+
+
+        var applicable_date = "";
+        var currency = "";
+        var tenor = "";
+        var settled_date = "";
+        var bid_rate = "";
+        var offer_rate = "";
+        var source = "";
+
+
+        applicable_date = currRow.getCell(1).value;
+        currency = currRow.getCell(2).value;
+        tenor = currRow.getCell(3).value;
+        settled_date = currRow.getCell(4).value;
+        bid_rate = currRow.getCell(5).value;
+        offer_rate = currRow.getCell(6).value;
+        source = currRow.getCell(7).value;
+
+        if (applicable_date) {
+          applicable_date = applicable_date.toString();
+        }
+        if (currency) {
+          currency = currency.toString();
+        }
+        if (tenor) {
+          tenor = tenor.toString();
+        }
+        if (settled_date) {
+          settled_date = settled_date.toString();
+        }
+        if (bid_rate) {
+          bid_rate = bid_rate.toString();
+        }
+        if (offer_rate) {
+          offer_rate = offer_rate.toString();
+        }
+        if (source) {
+          source = source.toString();
+        }
+
+
+
+
+
+
+        // if (userid) {
+
+        json_ary.push({
+          userid: (userid),
+          applicable_date: applicable_date,
+          currency: (currency),
+          tenor: (tenor),
+          settled_date: (settled_date),
+          bid_rate: (bid_rate),
+          offer_rate: (offer_rate),
+          source: (source),
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: 'admin',
+          updated_by: 'admin',
+        });
+
+
+
+        // }
+      }
+      cnt++;
+    });
+
+    Usdinrpremiumexcel.collection.insertMany(json_ary, function (err, docs) {
+      if (err) {
+        //return console.error(err);
+        res.json({ response: false, message: "Excel not uploaded" });
+      } else {
+        res.json({ response: true, message: "Excel has been successfully uploaded", filepath: filePath, count: json_ary.length });
+      }
+    });
+  });
+
+})
+
+
+
+router.post('/upload_pcfcexcel', upload.single('file'), function (req, res) {
+  // var wb = new Excel.Workbook();
+  var filename = "";
+  var userid = "";
+  if (req.file) {
+    filename = req.file.filename;
+    userid = req.body.userid;
+    console.log('userid', req.body.userid);
+  }
+
+
+  var filePath = path.resolve(DIR + "/" + filename);
+
+
+  var XLSX = require('xlsx')
+  var workbook = XLSX.readFile(filePath);
+  var sheet_name_list = workbook.SheetNames;
+  var Excel = require("exceljs");
+  var workbook = new Excel.Workbook();
+  var cnt = 1;
+  var json_ary = [];
+  ///var batch_id = String(Math.floor(Math.random() * 100) + 2 + "" + new Date().getTime());
+  workbook.xlsx.readFile(filePath).then(function () {
+    var worksheet = workbook.getWorksheet(sheet_name_list[0]);
+    worksheet.eachRow({ includeEmpty: true }, function (row, rowNumber) {
+      currRow = worksheet.getRow(rowNumber);
+      if (cnt > 1 && currRow.getCell(1).value && currRow.getCell(4).value && currRow.getCell(5).value && currRow.getCell(6).value && currRow.getCell(7).value && currRow.getCell(8).value) {
+
+
+        var type = "";
+        var company_name = "";
+        var bank_name = "";
+        var currency = "";
+        var amount_in_fc = "";
+        var start_date = "";
+        var from_date = "";
+        var to_date = "";
+        var spot = "";
+        var premium = "";
+        var bank_margin = "";
+
+
+
+
+
+
+
+
+        type = currRow.getCell(1).value;
+        company_name = currRow.getCell(2).value;
+        bank_name = currRow.getCell(3).value;
+        currency = currRow.getCell(4).value;
+        amount_in_fc = currRow.getCell(5).value;
+        start_date = currRow.getCell(6).value;
+        from_date = currRow.getCell(7).value;
+        to_date = currRow.getCell(8).value;
+        spot = currRow.getCell(9).value;
+        premium = currRow.getCell(10).value;
+        bank_margin = currRow.getCell(11).value;
+
+        if (type) {
+          type = type.toString();
+        }
+        if (company_name) {
+          company_name = company_name.toString();
+        }
+        if (bank_name) {
+          bank_name = bank_name.toString();
+        }
+        if (currency) {
+          currency = currency.toString();
+        }
+        if (amount_in_fc) {
+          amount_in_fc = amount_in_fc.toString();
+        }
+        if (start_date) {
+          start_date = start_date.toString();
+        }
+        if (from_date) {
+          from_date = from_date.toString();
+        }
+
+        if (to_date) {
+          to_date = to_date.toString();
+        }
+        if (spot) {
+          spot = spot.toString();
+        }
+        if (premium) {
+          premium = premium.toString();
+        }
+        if (bank_margin) {
+          bank_margin = bank_margin.toString();
+        }
+
+
+
+
+
+
+        // if (userid) {
+
+        json_ary.push({
+          userid: (userid),
+          type: type,
+          company_name: company_name,
+          bank_name: bank_name,
+          currency: (currency),
+          amount_in_fc: (amount_in_fc),
+          start_date: (start_date),
+          from_date: (from_date),
+          to_date: (to_date),
+          spot: (spot),
+          premium: (premium),
+          bank_margin: (bank_margin),
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: 'admin',
+          updated_by: 'admin',
+        });
+
+
+
+        // }
+      }
+      cnt++;
+    });
+
+    Pcfcexcel.collection.insertMany(json_ary, function (err, docs) {
+      if (err) {
+        //return console.error(err);
+        res.json({ response: false, message: "Excel not uploaded" });
+      } else {
+        res.json({ response: true, message: "Excel has been successfully uploaded", filepath: filePath, count: json_ary.length });
+      }
+    });
+  });
+
+})
+
+router.post('/getpcfctexceldata', function (req, res, next) {
+  let userid = req.body.userid;
+  let type = req.body.type;
+  console.log({ userid: { '$eq': userid }, type: { '$eq': type } })
+  Pcfcexcel.find({ userid: { '$eq': userid }, type: { '$eq': type } }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+
+      res.json({ response: true, message: "Data found", details: user });
+    } else {
+      res.json({ response: false, message: "No Data found" });
+    }
+  });
+});
+
+
+
+router.post('/upload_forexbuyexcel', upload.single('file'), function (req, res) {
+  // var wb = new Excel.Workbook();
+  var filename = "";
+  var userid = "";
+  if (req.file) {
+    filename = req.file.filename;
+    userid = req.body.userid;
+    console.log('userid', req.body.userid);
+  }
+
+
+  var filePath = path.resolve(DIR + "/" + filename);
+
+
+  var XLSX = require('xlsx')
+  var workbook = XLSX.readFile(filePath);
+  var sheet_name_list = workbook.SheetNames;
+  var Excel = require("exceljs");
+  var workbook = new Excel.Workbook();
+  var cnt = 1;
+  var json_ary = [];
+  ///var batch_id = String(Math.floor(Math.random() * 100) + 2 + "" + new Date().getTime());
+  workbook.xlsx.readFile(filePath).then(function () {
+    var worksheet = workbook.getWorksheet(sheet_name_list[0]);
+    worksheet.eachRow({ includeEmpty: true }, function (row, rowNumber) {
+      currRow = worksheet.getRow(rowNumber);
+      if (cnt > 1 && currRow.getCell(1).value && currRow.getCell(4).value && currRow.getCell(5).value && currRow.getCell(6).value && currRow.getCell(7).value && currRow.getCell(8).value) {
+
+
+        var type = "";
+        var company_name = "";
+        var bank_name = "";
+        var currency = "";
+        var amount_in_fc = "";
+        var start_date = "";
+        var from_date = "";
+        var to_date = "";
+        var spot = "";
+        var premium = "";
+        var bank_margin = "";
+
+
+
+
+
+
+
+
+        type = currRow.getCell(1).value;
+        company_name = currRow.getCell(2).value;
+        bank_name = currRow.getCell(3).value;
+        currency = currRow.getCell(4).value;
+        amount_in_fc = currRow.getCell(5).value;
+        start_date = currRow.getCell(6).value;
+        from_date = currRow.getCell(7).value;
+        to_date = currRow.getCell(8).value;
+        spot = currRow.getCell(9).value;
+        premium = currRow.getCell(10).value;
+        bank_margin = currRow.getCell(11).value;
+
+        if (type) {
+          type = type.toString();
+        }
+        if (company_name) {
+          company_name = company_name.toString();
+        }
+        if (bank_name) {
+          bank_name = bank_name.toString();
+        }
+        if (currency) {
+          currency = currency.toString();
+        }
+        if (amount_in_fc) {
+          amount_in_fc = amount_in_fc.toString();
+        }
+        if (start_date) {
+          start_date = start_date.toString();
+        }
+        if (from_date) {
+          from_date = from_date.toString();
+        }
+
+        if (to_date) {
+          to_date = to_date.toString();
+        }
+        if (spot) {
+          spot = spot.toString();
+        }
+        if (premium) {
+          premium = premium.toString();
+        }
+        if (bank_margin) {
+          bank_margin = bank_margin.toString();
+        }
+
+
+
+
+
+
+        // if (userid) {
+
+        json_ary.push({
+          userid: (userid),
+          type: type,
+          company_name: company_name,
+          bank_name: bank_name,
+          currency: (currency),
+          amount_in_fc: (amount_in_fc),
+          start_date: (start_date),
+          from_date: (from_date),
+          to_date: (to_date),
+          spot: (spot),
+          premium: (premium),
+          bank_margin: (bank_margin),
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: 'admin',
+          updated_by: 'admin',
+        });
+
+
+
+        // }
+      }
+      cnt++;
+    });
+
+    Forexbuyexcel.collection.insertMany(json_ary, function (err, docs) {
+      if (err) {
+        //return console.error(err);
+        res.json({ response: false, message: "Excel not uploaded" });
+      } else {
+        res.json({ response: true, message: "Excel has been successfully uploaded", filepath: filePath, count: json_ary.length });
+      }
+    });
+  });
+
+})
+
+
+router.post('/getforexbuyexceldata', function (req, res, next) {
+  let userid = req.body.userid;
+  let type = req.body.type;
+  console.log({ userid: { '$eq': userid }, type: { '$eq': type } })
+  Forexbuyexcel.find({ userid: { '$eq': userid }, type: { '$eq': type } }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+
+      res.json({ response: true, message: "Data found", details: user });
+    } else {
+      res.json({ response: false, message: "No Data found" });
+    }
+  });
+});
+
+
+
+
+
+
+router.post('/upload_forexsellexcel', upload.single('file'), function (req, res) {
+  // var wb = new Excel.Workbook();
+  var filename = "";
+  var userid = "";
+  if (req.file) {
+    filename = req.file.filename;
+    userid = req.body.userid;
+    console.log('userid', req.body.userid);
+  }
+
+
+  var filePath = path.resolve(DIR + "/" + filename);
+
+
+  var XLSX = require('xlsx')
+  var workbook = XLSX.readFile(filePath);
+  var sheet_name_list = workbook.SheetNames;
+  var Excel = require("exceljs");
+  var workbook = new Excel.Workbook();
+  var cnt = 1;
+  var json_ary = [];
+  ///var batch_id = String(Math.floor(Math.random() * 100) + 2 + "" + new Date().getTime());
+  workbook.xlsx.readFile(filePath).then(function () {
+    var worksheet = workbook.getWorksheet(sheet_name_list[0]);
+    worksheet.eachRow({ includeEmpty: true }, function (row, rowNumber) {
+      currRow = worksheet.getRow(rowNumber);
+      if (cnt > 1 && currRow.getCell(1).value && currRow.getCell(4).value && currRow.getCell(5).value && currRow.getCell(6).value && currRow.getCell(7).value && currRow.getCell(8).value) {
+
+
+        var type = "";
+        var company_name = "";
+        var bank_name = "";
+        var currency = "";
+        var amount_in_fc = "";
+        var start_date = "";
+        var from_date = "";
+        var to_date = "";
+        var spot = "";
+        var premium = "";
+        var bank_margin = "";
+
+
+
+
+
+
+
+
+        type = currRow.getCell(1).value;
+        company_name = currRow.getCell(2).value;
+        bank_name = currRow.getCell(3).value;
+        currency = currRow.getCell(4).value;
+        amount_in_fc = currRow.getCell(5).value;
+        start_date = currRow.getCell(6).value;
+        from_date = currRow.getCell(7).value;
+        to_date = currRow.getCell(8).value;
+        spot = currRow.getCell(9).value;
+        premium = currRow.getCell(10).value;
+        bank_margin = currRow.getCell(11).value;
+
+        if (type) {
+          type = type.toString();
+        }
+        if (company_name) {
+          company_name = company_name.toString();
+        }
+        if (bank_name) {
+          bank_name = bank_name.toString();
+        }
+        if (currency) {
+          currency = currency.toString();
+        }
+        if (amount_in_fc) {
+          amount_in_fc = amount_in_fc.toString();
+        }
+        if (start_date) {
+          start_date = start_date.toString();
+        }
+        if (from_date) {
+          from_date = from_date.toString();
+        }
+
+        if (to_date) {
+          to_date = to_date.toString();
+        }
+        if (spot) {
+          spot = spot.toString();
+        }
+        if (premium) {
+          premium = premium.toString();
+        }
+        if (bank_margin) {
+          bank_margin = bank_margin.toString();
+        }
+
+
+
+
+
+
+        // if (userid) {
+
+        json_ary.push({
+          userid: (userid),
+          type: type,
+          company_name: company_name,
+          bank_name: bank_name,
+          currency: (currency),
+          amount_in_fc: (amount_in_fc),
+          start_date: (start_date),
+          from_date: (from_date),
+          to_date: (to_date),
+          spot: (spot),
+          premium: (premium),
+          bank_margin: (bank_margin),
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: 'admin',
+          updated_by: 'admin',
+        });
+
+
+
+        // }
+      }
+      cnt++;
+    });
+
+    Forexsellexcel.collection.insertMany(json_ary, function (err, docs) {
+      if (err) {
+        //return console.error(err);
+        res.json({ response: false, message: "Excel not uploaded" });
+      } else {
+        res.json({ response: true, message: "Excel has been successfully uploaded", filepath: filePath, count: json_ary.length });
+      }
+    });
+  });
+
+})
+
+
+router.post('/getforexsellexceldata', function (req, res, next) {
+  let userid = req.body.userid;
+  let type = req.body.type;
+  console.log({ userid: { '$eq': userid }, type: { '$eq': type } })
+  Forexsellexcel.find({ userid: { '$eq': userid }, type: { '$eq': type } }, function (err, user) {
+    if (err) {
+      res.json({ response: false, message: err });
+    }
+    if (user) {
+
+      res.json({ response: true, message: "Data found", details: user });
+    } else {
+      res.json({ response: false, message: "No Data found" });
+    }
+  });
+});
+
+
+
+
+
+
+// router.post('/getusdcalculation', function(req, res, next) {
+//   let applicable_date = req.body.applicable_date;
+//    let due_date = req.body.due_date;
+//    let currency = req.body.currency;
+//    console.log(req.body.applicable_date)
+//   //console.log({ userid: {'$eq':userid}, type: {'$eq':type} })
+//   Spotrateexcel.find({ applicable_date: {'$eq':applicable_date} }, function (err, user) {
+//     if (err) {
+//       res.json({ response: false, message: err });
+//     }
+//     if (user) {
+//        // var mydata = [];
+//        // mydata.push(user)
+//        var myspot;
+//        for (var i = user.length - 1; i >= 0; i--) {
+//           if (currency=="USD") {
+//             myspot =  user[i].spotin_usd;
+//           } else {
+//           myspot =  user[i].spotin_eur;
+//           }
+//            console.log(  user[i]);
+//        }
+//       // console.log(user);
+
+
+// //for previous month last date 
+// var date = new Date(due_date);
+// date.setDate(0);
+// console.log(date);
+//        var myresponse = {"spot":myspot,"settled_date":date,"applicable_date":applicable_date}
+//       res.json({ response: true, message: "Data found", details: myresponse });
+//     } else {
+//       res.json({ response: false, message: "No Data found" });
+//     }
+//   });
+// });
+
+
+
+
+
+router.post('/getusdcalculation', function (req, res, next) {
+  let applicable_date = req.body.applicable_date;
+  let newapplicable_date = req.body.newapplicable_date;
+  let due_date = req.body.due_date;
+  let currency = req.body.currency;
+  console.log("TEST 123")
+  let premonthlastdate = req.body.premonthlastdate;
+  let newdue_date = req.body.newdue_date;
+  console.log(req.body);
+  console.log("1",req.body.currency)
+  console.log("2",req.body.applicable_date);
+  console.log("3",req.body.due_date);
+  console.log("4",premonthlastdate);
+
+  //   var date = new Date(due_date)
+
+  // // var mydate = date.toString()
+
+  // date.setDate(0);
+  //    console.log(date)
+
+
+  if (currency == "USD") {
+
+    // var count1=function(callback){
+    //         Spotrateexcel.find({
+    //          applicable_date: {'$eq':applicable_date}
+    //         },function(err,res1){
+    //           if(err){callback(err,null);}
+    //           else {callback(null,res1);}
+    //         })
+    //       };
+
+
+    // var count1 = function (callback) {
+    //     let app_date = applicable_date.split(" ");
+    //     Spotrateexcel.find({
+    //       applicable_date: { '$regex': app_date[3] }
+    //     }, function (err, res1) {
+    //       if (err) { callback(err, null); }
+    //       else {
+    //         let arr = [];
+    //         for (let i = 0; i < res1.length; i++) {
+    //           var temp = res1[i].applicable_date.split(" ");
+    //           arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+    //         }
+    //         var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+    //         arr.sort(function (a, b) {
+    //           var distancea = Math.abs(diffdate - a);
+    //           var distanceb = Math.abs(diffdate - b);
+    //           return distancea - distanceb; // sort a before b when the distance is smaller
+    //         });
+
+    //         for (let i = 0; i < res1.length; i++) {
+    //           var temp = res1[i].applicable_date.split(" ");
+    //           if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()){
+    //             console.log('1311',res1[i]);
+    //             arr = [];
+    //             arr.push(res1[i])
+    //             callback(null, arr); 
+    //           }
+
+
+    //         }
+
+
+    //       }
+    //     })
+    //   };
+
+    var count1 = function (callback) {
+      let app_date = applicable_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res1) {
+        if (err) { callback(err, null); }
+        else {
+
+          //console.log('count1',res1)
+          let arr = [];
+          for (let i = 0; i < res1.length; i++) {
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res1.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res1[i]);
+              arr = [];
+              arr.push(res1[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+    var count2 = function (callback) {
+      Usdinrpremiumexcel.find({
+        settled_date: { '$eq': premonthlastdate }, applicable_date: { '$eq': applicable_date }
+      }, function (err, res2) {
+        //console.log('count2',res2)
+        if (err) { callback(err, null); }
+        else { callback(null, res2); }
+      })
+    };
+
+
+    var count3 = function (callback) {
+      Usdinrpremiumexcel.find({
+        settled_date: { '$eq': due_date }, applicable_date: { '$eq': applicable_date }
+      }, function (err, res3) {
+        //console.log('count3',res3)
+        if (err) { callback(err, null); }
+        else { callback(null, res3); }
+      })
+    };
+
+    // var count4=function(callback){
+    //   Spotrateexcel.find({
+    //    applicable_date: {'$eq':newapplicable_date}
+    //   },function(err,res4){
+    //     if(err){callback(err,null);}
+    //     else {callback(null,res4);}
+    //   })
+    // };
+
+
+
+    var count4 = function (callback) {
+      let app_date = newapplicable_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res4) {
+        if (err) { callback(err, null); }
+        else {
+          console.log('count4',res4)
+          // console.log('res1',res4)
+          let arr = [];
+          for (let i = 0; i < res4.length; i++) {
+            var temp = res4[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+           console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          if (res4.length > 0){
+            for (let i = 0; i < res4.length; i++) {
+              // console.log('arrdown',arr)
+              var temp = res4[i].applicable_date.split(" ");
+              if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+                 console.log('1311',res4[i]);
+                arr = [];
+                arr.push(res4[i])
+                callback(null, arr);
+              }
+            }
+          } else {
+            callback(null, []);
+          }
+          
+
+
+        }
+      })
+    };
+
+    var count5 = function (callback) {
+      Usdinrpremiumexcel.find({
+        settled_date: { '$eq': premonthlastdate }, applicable_date: { '$eq': newapplicable_date }
+      }, function (err, res5) {
+        //console.log('count5',res5)
+        if (err) { callback(err, null); }
+        else { callback(null, res5); }
+      })
+    };
+
+
+    var count6 = function (callback) {
+      Usdinrpremiumexcel.find({
+        settled_date: { '$eq': due_date }, applicable_date: { '$eq': newapplicable_date }
+      }, function (err, res6) {
+        //console.log('count6',res6)
+        if (err) { callback(err, null); }
+        else { callback(null, res6); }
+      })
+    };
+
+
+
+    var count7 = function (callback) {
+      let app_date = newdue_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res7) {
+        //console.log('count7',res7)
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res1',res7)
+          let arr = [];
+          for (let i = 0; i < res7.length; i++) {
+            var temp = res7[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res7.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res7[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res7[i]);
+              arr = [];
+              arr.push(res7[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+  } else {
+
+    var count1 = function (callback) {
+      let app_date = applicable_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res1) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res1',res1)
+          let arr = [];
+          for (let i = 0; i < res1.length; i++) {
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res1.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res1[i]);
+              arr = [];
+              arr.push(res1[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+    var count2 = function (callback) {
+      Eurinrpremiumexcel.find({
+        settled_date: { '$eq': premonthlastdate }, applicable_date: { '$eq': applicable_date }
+      }, function (err, res2) {
+        if (err) { callback(err, null); }
+        else { callback(null, res2); }
+      })
+    };
+
+
+    var count3 = function (callback) {
+      Eurinrpremiumexcel.find({
+        settled_date: { '$eq': due_date }, applicable_date: { '$eq': applicable_date }
+      }, function (err, res3) {
+        if (err) { callback(err, null); }
+        else { callback(null, res3); }
+      })
+    };
+
+
+
+
+
+    // var count4 = function (callback) {
+    //   Spotrateexcel.find({
+    //     applicable_date: { '$eq': newapplicable_date }
+    //   }, function (err, res4) {
+    //     if (err) { callback(err, null); }
+    //     else { callback(null, res4); }
+    //   })
+    // };
+
+
+    var count4 = function (callback) {
+      let app_date = newapplicable_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res4) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res1',res4)
+          let arr = [];
+          for (let i = 0; i < res4.length; i++) {
+            var temp = res4[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res4.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res4[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res4[i]);
+              arr = [];
+              arr.push(res4[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+
+    var count5 = function (callback) {
+      Eurinrpremiumexcel.find({
+        settled_date: { '$eq': premonthlastdate }, applicable_date: { '$eq': newapplicable_date }
+      }, function (err, res5) {
+        if (err) { callback(err, null); }
+        else { callback(null, res5); }
+      })
+    };
+
+
+    var count6 = function (callback) {
+      Eurinrpremiumexcel.find({
+        settled_date: { '$eq': due_date }, applicable_date: { '$eq': newapplicable_date }
+      }, function (err, res6) {
+        if (err) { callback(err, null); }
+        else { callback(null, res6); }
+      })
+    };
+
+
+
+
+    var count7 = function (callback) {
+      let app_date = newdue_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res7) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res1',res7)
+          let arr = [];
+          for (let i = 0; i < res7.length; i++) {
+            var temp = res7[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res7.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res7[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res7[i]);
+              arr = [];
+              arr.push(res7[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+  }
+
+
+
+
+
+  //   var count3=function(callback){
+  //   Usdinrpremiumexcel.find({
+  //    settled_date: {'$eq':due_date},applicable_date: {'$eq':applicable_date}
+  //   },function(err,res3){
+  //     if(err){callback(err,null);}
+  //     else {callback(null,res3);}
+  //   })
+  // };
+
+
+
+  async.parallel({ count1, count2, count3, count4, count5, count6, count7 }, function (err, results) {
+    console.log("results1", err);
+    results['response'] = true;
+    results['message'] = 'Data';
+    res.json(results);
+    res.end();
+    console.log("test123123", results);
+  });
+
+
+  //console.log({ userid: {'$eq':userid}, type: {'$eq':type} })
+  //   Spotrateexcel.find({ applicable_date: {'$eq':applicable_date} }, function (err, user) {
+  //     if (err) {
+  //       res.json({ response: false, message: err });
+  //     }
+  //     if (user) {
+  //        // var mydata = [];
+  //        // mydata.push(user)
+  //        var myspot;
+  //        for (var i = user.length - 1; i >= 0; i--) {
+  //           if (currency=="USD") {
+  //             myspot =  user[i].spotin_usd;
+  //           } else {
+  //           myspot =  user[i].spotin_eur;
+  //           }
+  //            console.log(  user[i]);
+  //        }
+  //       // console.log(user);
+
+
+  // //for previous month last date 
+  // var date = new Date(due_date);
+  // date.setDate(0);
+  // console.log(date);
+  //        var myresponse = {"spot":myspot,"settled_date":date,"applicable_date":applicable_date}
+  //       res.json({ response: true, message: "Data found", details: myresponse });
+  //     } else {
+  //       res.json({ response: false, message: "No Data found" });
+  //     }
+  //   });
+});
+
+
+
+
+// router.post('/getusdcalculation', function (req, res, next) {
+//   let applicable_date = req.body.applicable_date;
+//   let newapplicable_date = req.body.newapplicable_date;
+//   let due_date = req.body.due_date;
+//   let currency = req.body.currency;
+
+//   let premonthlastdate = req.body.premonthlastdate;
+//    let newdue_date = req.body.newdue_date;
+
+//     let choosedatemonthlast_date = req.body.choosedatemonthlast_date;
+//     let choosedatepremonthlast_date = req.body.choosedatepremonthlast_date;
+
+//   console.log(req.body.currency)
+//   console.log(req.body.applicable_date);
+//   console.log(req.body.due_date);
+//   console.log(premonthlastdate);
+
+//   console.log('choosedatemonthlast_date',choosedatemonthlast_date);
+//   console.log('choosedatepremonthlast_date',choosedatepremonthlast_date);
+
+//   //   var date = new Date(due_date)
+
+//   // // var mydate = date.toString()
+
+//   // date.setDate(0);
+//   //    console.log(date)
+
+
+//   if (currency == "USD") {
+
+
+//     // var applicable_date1 =applicable_date.split(" ");
+//     // console.log(applicable_date1)
+//     // console.log(applicable_date1[3])
+
+
+//     // var count1=function(callback){
+//     //         Spotrateexcel.find({
+//     //          applicable_date: {'$regex': applicable_date1[3]}
+//     //         },function(err,res1){
+//     //           if(err){callback(err,null);}
+//     //           else {callback(null,res1);
+//     //             console.log('res1',res1);
+
+//     //             // for (var i=0; i<res1.length;  i++) {
+//     //             //       if (res1[i].applicable_date==applicable_date) {
+//     //             //         console.log(res1[i]);
+//     //             //       } else if(res1[i].applicable_date!=applicable_date){
+//     //             //         console.log('false');
+
+//     //             //       }
+//     //             // }
+
+
+//     //           }
+//     //         }).sort({applicable_date:1})
+//     //       };
+
+//     // var count1 = function (callback) {
+//     //   Spotrateexcel.find({
+//     //     applicable_date: { '$eq': applicable_date }
+//     //   }, function (err, res1) {
+//     //     if (err) { callback(err, null); }
+//     //     else {
+//     //       callback(null, res1);
+//     //       console.log('res1', res1);
+//     //     }
+//     //   })
+//     // };
+
+
+//    // Spotrateexcel.find({"applicable_date":{$lte: new ISODate("2012-01-12T20:15:31Z")}})
+
+
+
+//     // var count7 = function (callback) {
+
+//     //   // var newappli =  new Date(applicable_date);
+//     //   // console.log(newappli)
+//     //   Spotrateexcel.find({
+//     //    "applicable_date":{$lte: 'Mon Mar 08 2020 05:30:00 GMT+0530 (India Standard Time'}
+//     //   }, function (err, res7) {
+//     //     if (err) { callback(err, null); }
+//     //     else {
+//     //       callback(null, res7);
+//     //       console.log('res7', res7);
+//     //     }
+//     //   }).sort({"applicable_date":-1}
+//     //   ).limit(1)
+//     // };
+
+
+//      var count1 = function (callback) {
+//       let app_date = applicable_date.split(" ");
+//       Spotrateexcel.find({
+//         applicable_date: { '$regex': app_date[3] }
+//       }, function (err, res1) {
+//         if (err) { callback(err, null); }
+//         else {
+
+//            // console.log('res1',res1)
+//           let arr = [];
+//           for (let i = 0; i < res1.length; i++) {
+//             var temp = res1[i].applicable_date.split(" ");
+//             if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+//               arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+//             }
+//            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+//           }
+//           var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+//           //console.log('diffdate',diffdate)
+
+//           arr.sort(function (a, b) {
+//             var distancea = Math.abs(diffdate - a);
+//             var distanceb = Math.abs(diffdate - b);
+//             return distancea - distanceb; // sort a before b when the distance is smaller
+//           });
+//           // console.log('arrup',arr)
+
+//           // for (var i = 0; i < arr.length; i++) {
+//           //   console.log('inarray',arr[i])
+//           // }
+
+//           for (let i = 0; i < res1.length; i++) {
+//            // console.log('arrdown',arr)
+//             var temp = res1[i].applicable_date.split(" ");
+//             if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()){
+//              // console.log('1311',res1[i]);
+//               arr = [];
+//               arr.push(res1[i])
+//               callback(null, arr); 
+//             }
+
+
+//           }
+
+
+//         }
+//       })
+//     };
+
+
+
+//     var count2 = function (callback) {
+//       Usdinrpremiumexcel.find({
+//         settled_date: { '$eq': premonthlastdate }, applicable_date: { '$eq': applicable_date }
+//       }, function (err, res2) {
+//         if (err) { callback(err, null); }
+//         else {
+//           callback(null, res2);
+//          // console.log('res2', res2);
+//         }
+//       })
+//     };
+
+
+//     var count3 = function (callback) {
+//       Usdinrpremiumexcel.find({
+//         settled_date: { '$eq': due_date }, applicable_date: { '$eq': applicable_date }
+//       }, function (err, res3) {
+//         if (err) { callback(err, null); }
+//         else {
+//           callback(null, res3);
+//           //console.log('res3', res3);
+//         }
+//       })
+//     };
+
+
+
+
+
+//        var count4 = function (callback) {
+//       let app_date = newapplicable_date.split(" ");
+//       Spotrateexcel.find({
+//         applicable_date: { '$regex': app_date[3] }
+//       }, function (err, res4) {
+//         if (err) { callback(err, null); }
+//         else {
+
+//            // console.log('res1',res4)
+//           let arr = [];
+//           for (let i = 0; i < res4.length; i++) {
+//             var temp = res4[i].applicable_date.split(" ");
+//             if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+//               arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+//             }
+//            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+//           }
+//           var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+//           //console.log('diffdate',diffdate)
+
+//           arr.sort(function (a, b) {
+//             var distancea = Math.abs(diffdate - a);
+//             var distanceb = Math.abs(diffdate - b);
+//             return distancea - distanceb; // sort a before b when the distance is smaller
+//           });
+//           // console.log('arrup',arr)
+
+//           // for (var i = 0; i < arr.length; i++) {
+//           //   console.log('inarray',arr[i])
+//           // }
+
+//           for (let i = 0; i < res4.length; i++) {
+//            // console.log('arrdown',arr)
+//             var temp = res4[i].applicable_date.split(" ");
+//             if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()){
+//              // console.log('1311',res4[i]);
+//               arr = [];
+//               arr.push(res4[i])
+//               callback(null, arr); 
+//             }
+
+
+//           }
+
+
+//         }
+//       })
+//     };
+
+
+
+
+
+//     var count5 = function (callback) {
+//       Usdinrpremiumexcel.find({
+//         settled_date: { '$eq': premonthlastdate }, applicable_date: { '$eq': newapplicable_date }
+//       }, function (err, res5) {
+//         if (err) { callback(err, null); }
+//         else {
+//           callback(null, res5);
+//           //console.log('res5', res5);
+//         }
+//       })
+//     };
+
+
+//     var count6 = function (callback) {
+//       Usdinrpremiumexcel.find({
+//         settled_date: { '$eq': due_date }, applicable_date: { '$eq': newapplicable_date }
+//       }, function (err, res6) {
+//         if (err) { callback(err, null); }
+//         else {
+//           callback(null, res6);
+//           //console.log('res6', res6);
+//         }
+//       })
+//     };
+
+
+// var count7 = function (callback) {
+//       let app_date = newdue_date.split(" ");
+//       Spotrateexcel.find({
+//         applicable_date: { '$regex': app_date[3] }
+//       }, function (err, res7) {
+//         if (err) { callback(err, null); }
+//         else {
+
+//            // console.log('res1',res7)
+//           let arr = [];
+//           for (let i = 0; i < res7.length; i++) {
+//             var temp = res7[i].applicable_date.split(" ");
+//             if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+//               arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+//             }
+//            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+//           }
+//           var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+//           //console.log('diffdate',diffdate)
+
+//           arr.sort(function (a, b) {
+//             var distancea = Math.abs(diffdate - a);
+//             var distanceb = Math.abs(diffdate - b);
+//             return distancea - distanceb; // sort a before b when the distance is smaller
+//           });
+//           // console.log('arrup',arr)
+
+//           // for (var i = 0; i < arr.length; i++) {
+//           //   console.log('inarray',arr[i])
+//           // }
+
+//           for (let i = 0; i < res7.length; i++) {
+//            // console.log('arrdown',arr)
+//             var temp = res7[i].applicable_date.split(" ");
+//             if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()){
+//              // console.log('1311',res7[i]);
+//               arr = [];
+//               arr.push(res7[i])
+//               callback(null, arr); 
+//             }
+
+
+//           }
+
+
+//         }
+//       })
+//     };
+
+//   var count8 = function (callback) {
+//       Usdinrpremiumexcel.find({
+//         settled_date: { '$eq': choosedatemonthlast_date }, applicable_date: { '$eq': applicable_date }
+//       }, function (err, res8) {
+//         if (err) { callback(err, null); }
+//         else {
+//           callback(null, res8);
+//           //console.log('res8', res8);
+//         }
+//       })
+//     };
+
+
+
+//  var count9 = function (callback) {
+//       Usdinrpremiumexcel.find({
+//         settled_date: { '$eq': choosedatepremonthlast_date }, applicable_date: { '$eq': applicable_date }
+//       }, function (err, res9) {
+//         if (err) { callback(err, null); }
+//         else {
+//           callback(null, res9);
+//          // console.log('res9', res9);
+//         }
+//       })
+//     };
+
+
+
+
+//   } else {
+//      var count1 = function (callback) {
+//       let app_date = applicable_date.split(" ");
+//       Spotrateexcel.find({
+//         applicable_date: { '$regex': app_date[3] }
+//       }, function (err, res1) {
+//         if (err) { callback(err, null); }
+//         else {
+
+//            // console.log('res1',res1)
+//           let arr = [];
+//           for (let i = 0; i < res1.length; i++) {
+//             var temp = res1[i].applicable_date.split(" ");
+//             if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+//               arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+//             }
+//            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+//           }
+//           var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+//           //console.log('diffdate',diffdate)
+
+//           arr.sort(function (a, b) {
+//             var distancea = Math.abs(diffdate - a);
+//             var distanceb = Math.abs(diffdate - b);
+//             return distancea - distanceb; // sort a before b when the distance is smaller
+//           });
+//           // console.log('arrup',arr)
+
+//           // for (var i = 0; i < arr.length; i++) {
+//           //   console.log('inarray',arr[i])
+//           // }
+
+//           for (let i = 0; i < res1.length; i++) {
+//            // console.log('arrdown',arr)
+//             var temp = res1[i].applicable_date.split(" ");
+//             if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()){
+//              // console.log('1311',res1[i]);
+//               arr = [];
+//               arr.push(res1[i])
+//               callback(null, arr); 
+//             }
+
+
+//           }
+
+
+//         }
+//       })
+//     };
+
+//     var count2 = function (callback) {
+//       Eurinrpremiumexcel.find({
+//         settled_date: { '$eq': premonthlastdate }, applicable_date: { '$eq': applicable_date }
+//       }, function (err, res2) {
+//         if (err) { callback(err, null); }
+//         else { callback(null, res2); }
+//       })
+//     };
+
+
+//     var count3 = function (callback) {
+//       Eurinrpremiumexcel.find({
+//         settled_date: { '$eq': due_date }, applicable_date: { '$eq': applicable_date }
+//       }, function (err, res3) {
+//         if (err) { callback(err, null); }
+//         else { callback(null, res3); }
+//       })
+//     };
+
+
+
+
+
+//     // var count4 = function (callback) {
+//     //   Spotrateexcel.find({
+//     //     applicable_date: { '$eq': newapplicable_date }
+//     //   }, function (err, res4) {
+//     //     if (err) { callback(err, null); }
+//     //     else { callback(null, res4); }
+//     //   })
+//     // };
+
+
+//      var count4 = function (callback) {
+//       let app_date = newapplicable_date.split(" ");
+//       Spotrateexcel.find({
+//         applicable_date: { '$regex': app_date[3] }
+//       }, function (err, res4) {
+//         if (err) { callback(err, null); }
+//         else {
+
+//            // console.log('res1',res4)
+//           let arr = [];
+//           for (let i = 0; i < res4.length; i++) {
+//             var temp = res4[i].applicable_date.split(" ");
+//             if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+//               arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+//             }
+//            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+//           }
+//           var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+//           //console.log('diffdate',diffdate)
+
+//           arr.sort(function (a, b) {
+//             var distancea = Math.abs(diffdate - a);
+//             var distanceb = Math.abs(diffdate - b);
+//             return distancea - distanceb; // sort a before b when the distance is smaller
+//           });
+//           // console.log('arrup',arr)
+
+//           // for (var i = 0; i < arr.length; i++) {
+//           //   console.log('inarray',arr[i])
+//           // }
+
+//           for (let i = 0; i < res4.length; i++) {
+//            // console.log('arrdown',arr)
+//             var temp = res4[i].applicable_date.split(" ");
+//             if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()){
+//              // console.log('1311',res4[i]);
+//               arr = [];
+//               arr.push(res4[i])
+//               callback(null, arr); 
+//             }
+
+
+//           }
+
+
+//         }
+//       })
+//     };
+
+
+
+//     var count5 = function (callback) {
+//       Eurinrpremiumexcel.find({
+//         settled_date: { '$eq': premonthlastdate }, applicable_date: { '$eq': newapplicable_date }
+//       }, function (err, res5) {
+//         if (err) { callback(err, null); }
+//         else { callback(null, res5); }
+//       })
+//     };
+
+
+//     var count6 = function (callback) {
+//       Eurinrpremiumexcel.find({
+//         settled_date: { '$eq': due_date }, applicable_date: { '$eq': newapplicable_date }
+//       }, function (err, res6) {
+//         if (err) { callback(err, null); }
+//         else { callback(null, res6); }
+//       })
+//     };
+
+
+
+
+// var count7 = function (callback) {
+//       let app_date = newdue_date.split(" ");
+//       Spotrateexcel.find({
+//         applicable_date: { '$regex': app_date[3] }
+//       }, function (err, res7) {
+//         if (err) { callback(err, null); }
+//         else {
+
+//            // console.log('res1',res7)
+//           let arr = [];
+//           for (let i = 0; i < res7.length; i++) {
+//             var temp = res7[i].applicable_date.split(" ");
+//             if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+//               arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+//             }
+//            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+//           }
+//           var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+//           //console.log('diffdate',diffdate)
+
+//           arr.sort(function (a, b) {
+//             var distancea = Math.abs(diffdate - a);
+//             var distanceb = Math.abs(diffdate - b);
+//             return distancea - distanceb; // sort a before b when the distance is smaller
+//           });
+//           // console.log('arrup',arr)
+
+//           // for (var i = 0; i < arr.length; i++) {
+//           //   console.log('inarray',arr[i])
+//           // }
+
+//           for (let i = 0; i < res7.length; i++) {
+//            // console.log('arrdown',arr)
+//             var temp = res7[i].applicable_date.split(" ");
+//             if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()){
+//              // console.log('1311',res7[i]);
+//               arr = [];
+//               arr.push(res7[i])
+//               callback(null, arr); 
+//             }
+
+
+//           }
+
+
+//         }
+//       })
+//     };
+
+
+//      var count8 = function (callback) {
+//       Usdinrpremiumexcel.find({
+//         settled_date: { '$eq': choosedatemonthlast_date }, applicable_date: { '$eq': applicable_date }
+//       }, function (err, res8) {
+//         if (err) { callback(err, null); }
+//         else {
+//           callback(null, res8);
+//           //console.log('res8', res8);
+//         }
+//       })
+//     };
+
+
+
+//  var count9 = function (callback) {
+//       Usdinrpremiumexcel.find({
+//         settled_date: { '$eq': choosedatepremonthlast_date }, applicable_date: { '$eq': applicable_date }
+//       }, function (err, res9) {
+//         if (err) { callback(err, null); }
+//         else {
+//           callback(null, res9);
+//          // console.log('res9', res9);
+//         }
+//       })
+//     };
+
+
+
+//   }
+
+
+
+
+
+//   //   var count3=function(callback){
+//   //   Usdinrpremiumexcel.find({
+//   //    settled_date: {'$eq':due_date},applicable_date: {'$eq':applicable_date}
+//   //   },function(err,res3){
+//   //     if(err){callback(err,null);}
+//   //     else {callback(null,res3);}
+//   //   })
+//   // };
+
+
+
+//   async.parallel({ count1, count2, count3, count4, count5, count6, count7,count8,count9}, function (err, results) {
+//    console.log(results);
+//     results['response'] = true;
+//     results['message'] = 'Data';
+//     res.json(results);
+//     res.end();
+//   });
+
+
+//   //console.log({ userid: {'$eq':userid}, type: {'$eq':type} })
+//   //   Spotrateexcel.find({ applicable_date: {'$eq':applicable_date} }, function (err, user) {
+//   //     if (err) {
+//   //       res.json({ response: false, message: err });
+//   //     }
+//   //     if (user) {
+//   //        // var mydata = [];
+//   //        // mydata.push(user)
+//   //        var myspot;
+//   //        for (var i = user.length - 1; i >= 0; i--) {
+//   //           if (currency=="USD") {
+//   //             myspot =  user[i].spotin_usd;
+//   //           } else {
+//   //           myspot =  user[i].spotin_eur;
+//   //           }
+//   //            console.log(  user[i]);
+//   //        }
+//   //       // console.log(user);
+
+
+//   // //for previous month last date 
+//   // var date = new Date(due_date);
+//   // date.setDate(0);
+//   // console.log(date);
+//   //        var myresponse = {"spot":myspot,"settled_date":date,"applicable_date":applicable_date}
+//   //       res.json({ response: true, message: "Data found", details: myresponse });
+//   //     } else {
+//   //       res.json({ response: false, message: "No Data found" });
+//   //     }
+//   //   });
+// });
+
+
+
+
+router.post('/getpcfccalculation', function (req, res, next) {
+  let applicable_date = req.body.choose_date;
+  let currency = req.body.currency;
+  let from_date = req.body.from_date;
+
+
+  console.log('applicable_date', applicable_date)
+  console.log('from_date', from_date)
+
+  if (currency == "USD") {
+
+    var count1 = function (callback) {
+      let app_date = applicable_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res1) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res1',res1)
+          let arr = [];
+          for (let i = 0; i < res1.length; i++) {
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res1.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res1[i]);
+              arr = [];
+              arr.push(res1[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+
+    var count2 = function (callback) {
+      let app_date = from_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res2) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res2',res2)
+          let arr = [];
+          for (let i = 0; i < res2.length; i++) {
+            var temp = res2[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res2.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res2[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res2[i]);
+              arr = [];
+              arr.push(res2[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+
+  } else {
+
+    var count1 = function (callback) {
+      let app_date = applicable_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res1) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res1',res1)
+          let arr = [];
+          for (let i = 0; i < res1.length; i++) {
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res1.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res1[i]);
+              arr = [];
+              arr.push(res1[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+
+    var count2 = function (callback) {
+      let app_date = from_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res2) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res2',res2)
+          let arr = [];
+          for (let i = 0; i < res2.length; i++) {
+            var temp = res2[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res2.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res2[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res2[i]);
+              arr = [];
+              arr.push(res2[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+
+
+
+
+  }
+
+  async.parallel({ count1, count2 }, function (err, results) {
+    // console.log(results);
+    results['response'] = true;
+    results['message'] = 'Data';
+    res.json(results);
+    res.end();
+  });
+
+});
+
+
+router.post('/getforexbuycalculation', function (req, res, next) {
+  let applicable_date = req.body.choose_date;
+  let currency = req.body.currency;
+  let from_date = req.body.from_date;
+
+
+  console.log('applicable_date', applicable_date)
+  console.log('from_date', from_date)
+
+  if (currency == "USD") {
+
+    var count1 = function (callback) {
+      let app_date = applicable_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res1) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res1',res1)
+          let arr = [];
+          for (let i = 0; i < res1.length; i++) {
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res1.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res1[i]);
+              arr = [];
+              arr.push(res1[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+
+    var count2 = function (callback) {
+      let app_date = from_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res2) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res2',res2)
+          let arr = [];
+          for (let i = 0; i < res2.length; i++) {
+            var temp = res2[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res2.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res2[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res2[i]);
+              arr = [];
+              arr.push(res2[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+
+  } else {
+
+    var count1 = function (callback) {
+      let app_date = applicable_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res1) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res1',res1)
+          let arr = [];
+          for (let i = 0; i < res1.length; i++) {
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res1.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res1[i]);
+              arr = [];
+              arr.push(res1[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+
+    var count2 = function (callback) {
+      let app_date = from_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res2) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res2',res2)
+          let arr = [];
+          for (let i = 0; i < res2.length; i++) {
+            var temp = res2[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res2.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res2[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res2[i]);
+              arr = [];
+              arr.push(res2[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+
+
+
+
+  }
+
+  async.parallel({ count1, count2 }, function (err, results) {
+    // console.log(results);
+    results['response'] = true;
+    results['message'] = 'Data';
+    res.json(results);
+    res.end();
+  });
+
+});
+
+
+
+router.post('/getforexsellcalculation', function (req, res, next) {
+  let applicable_date = req.body.choose_date;
+  let currency = req.body.currency;
+  let from_date = req.body.from_date;
+
+
+  console.log('applicable_date', applicable_date)
+  console.log('from_date', from_date)
+
+  if (currency == "USD") {
+
+    var count1 = function (callback) {
+      let app_date = applicable_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res1) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res1',res1)
+          let arr = [];
+          for (let i = 0; i < res1.length; i++) {
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res1.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res1[i]);
+              arr = [];
+              arr.push(res1[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+
+    var count2 = function (callback) {
+      let app_date = from_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res2) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res2',res2)
+          let arr = [];
+          for (let i = 0; i < res2.length; i++) {
+            var temp = res2[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res2.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res2[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res2[i]);
+              arr = [];
+              arr.push(res2[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+
+  } else {
+
+    var count1 = function (callback) {
+      let app_date = applicable_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res1) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res1',res1)
+          let arr = [];
+          for (let i = 0; i < res1.length; i++) {
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res1.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res1[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res1[i]);
+              arr = [];
+              arr.push(res1[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+
+    var count2 = function (callback) {
+      let app_date = from_date.split(" ");
+      Spotrateexcel.find({
+        applicable_date: { '$regex': app_date[3] }
+      }, function (err, res2) {
+        if (err) { callback(err, null); }
+        else {
+
+          // console.log('res2',res2)
+          let arr = [];
+          for (let i = 0; i < res2.length; i++) {
+            var temp = res2[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]) <= new Date(app_date[3], monthNum(app_date[1]), app_date[2])) {
+              arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+            }
+            // arr.push(new Date(temp[3], monthNum(temp[1]), temp[2]))
+          }
+          var diffdate = new Date(app_date[3], monthNum(app_date[1]), app_date[2]);
+
+          //console.log('diffdate',diffdate)
+
+          arr.sort(function (a, b) {
+            var distancea = Math.abs(diffdate - a);
+            var distanceb = Math.abs(diffdate - b);
+            return distancea - distanceb; // sort a before b when the distance is smaller
+          });
+          // console.log('arrup',arr)
+
+          // for (var i = 0; i < arr.length; i++) {
+          //   console.log('inarray',arr[i])
+          // }
+
+          for (let i = 0; i < res2.length; i++) {
+            // console.log('arrdown',arr)
+            var temp = res2[i].applicable_date.split(" ");
+            if (new Date(temp[3], monthNum(temp[1]), temp[2]).getTime() == new Date(arr[0]).getTime()) {
+              // console.log('1311',res2[i]);
+              arr = [];
+              arr.push(res2[i])
+              callback(null, arr);
+            }
+
+
+          }
+
+
+        }
+      })
+    };
+
+
+
+
+
+
+  }
+
+  async.parallel({ count1, count2 }, function (err, results) {
+    // console.log(results);
+    results['response'] = true;
+    results['message'] = 'Data';
+    res.json(results);
+    res.end();
+  });
+
+});
+
+
+function monthNum(month) {
+  var mon = 0;
+  switch (month) {
+    case "Jan":
+      mon = 0;
+      break;
+    case "Feb":
+      mon = 1;
+      break;
+    case "Mar":
+      mon = 2;
+      break;
+    case "Apr":
+      mon = 3;
+      break;
+    case "May":
+      mon = 4;
+      break;
+    case "Jun":
+      mon = 5;
+      break;
+    case "Jul":
+      mon = 6;
+      break;
+    case "Aug":
+      mon = 7;
+      break;
+    case "Sep":
+      mon = 8;
+      break;
+    case "Oct":
+      mon = 9;
+      break;
+    case "Nov":
+      mon = 10;
+      break;
+    case "Dec":
+      mon = 11;
+      break;
+  }
+  return mon;
+}
+
+
+
+
+module.exports = router;
